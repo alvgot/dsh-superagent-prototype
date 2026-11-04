@@ -101,20 +101,38 @@ linked plugin sources).
 | hourly cron | installed, dry-run under cron's minimal env exits 0 |
 | `git push origin main` | 4 commits pushed to `alvgot/dsh-superagent-prototype` over the deploy key |
 
-## 8. Pending
+## 8. First end-to-end run (passed)
 
-1. **Try it**: from `alvgot`, comment `@dsh-superagent-alv <request>` on an issue in
-   `alvgot/superagent-sandbox`. A Ticket should appear on the overview within about a
-   minute (the Source polls every 60 s).
-2. **Restart `dsh-tui` once** so the fixed plugin loads, then check the `Superagent`
-   panel (`alt+a`) and the `sa …` footer field.
-3. **Token hygiene**: the classic token was pasted into the chat transcript, so treat
-   it as exposed. It only reaches `alvgot/superagent-sandbox` (dedicated account), but
-   rotating it is cheap: create a new classic token with `repo`, `notifications`,
-   `read:org` and run `printf '%s' '<token>' | ~/.local/bin/gh-agent auth login
-   --hostname github.com --with-token`.
+A deliberately small, rule-matching request, so the whole path could be checked once:
 
-## 9. Notes
+- **Request** (by `alvgot`, comment on `alvgot/superagent-sandbox#1`): fix the typo in `docs/greeting.md`.
+  The file was seeded with `Weclome` so the request matched the enabled *Copy fixes* rule.
+- **Source**: the mention arrived through the agent account's notifications; the poll reported
+  `1 notifications`, `filtered: 0`.
+- **Ticket** `3b212a3f…`: stage `working`, strength *explicit*, one assignment, worktree
+  `/root/src/fix-greeting-typo-3b212a3f01ef` on branch `agent/fix-greeting-typo-3b212a3f01ef`.
+- **Delivery**: commit `fd322a6` authored by `dsh-superagent-alv`, branch pushed, PR #2 opened with a
+  one-line diff and a reply on the issue; the ticket moved to stage `person`.
+- **Human merge** by `alvgot` (`20ef488`): the next poll saw it, closed the ticket (stage `ended`,
+  threads dormant) and `main` now carries the fix.
+- **Timings**: comment 17:36:27 → ticket 17:37:22 (one poll cycle) → PR 17:37:58; merge 17:43 → ticket
+  ended 17:44.
+- **Terminal surface**: the panel showed the ticket in `person`, then the empty list and `sa 0/3`; the
+  footer cell tracked the service throughout.
+
+The port is documented in `docs/009-tui.md` (linked from `README.md`) and in `tui/README.md`.
+
+## 9. Pending
+
+1. **Rotate the classic token**: it was pasted into the chat transcript, so treat it as exposed. It only
+   reaches `alvgot/superagent-sandbox` (dedicated account), but rotating is cheap: create a new classic
+   token with `repo`, `notifications`, `read:org` and run `printf '%s' '<token>' |
+   ~/.local/bin/gh-agent auth login --hostname github.com --with-token`.
+2. **Give it a real task** when ready: a slightly larger request in the sandbox, then judge the PR scope
+   and wording; tune the prompts before widening the allowed list or turn on proactive work.
+
+## 10. Notes
+
 
 - Run the test suite with `NODE_ENV=test` in this environment; the ambient
   `NODE_ENV=production` is what breaks jsdom, not the repository.
