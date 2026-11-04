@@ -57,6 +57,11 @@ be replaced by a terminal surface. The bundle work lives in the operator's fork
 5. Created the `superagent` profile (web template, `webserver` on 3082, `stateDir /root/.dsh/state/superagent`) and linked this checkout into it.
 6. **Started the service**: `tmux` session `dsh-superagent`, pid 501189, answering on `127.0.0.1:3082`; it waits for setup (`repositoryUnset`) until the GitHub Source is saved.
 7. Wrote the terminal port in `tui/` (panel, footer field, shortcuts, loopback client) and installed it into the `dsh-tui` profile as a `link:`.
+8. Operator created `dsh-superagent-alv` and `alvgot/superagent-sandbox`, signed `gh-agent` in and invited the agent; I accepted the invitation as the agent (`push: true`, `triage: true`).
+9. Cloned the base checkout to `/root/src/superagent-sandbox` (the prepare command adds one worktree per Ticket from it).
+10. Saved all four settings blocks through the Management API: `source:github` (`alvgot/superagent-sandbox`, CLI `/root/.local/bin/gh-agent`), `policy` (allowed: `alvgot`), `executor` (`/root/src` + worktree prepare command), `prompts` (commit author `dsh-superagent-alv`, auto-merge paragraph removed).
+11. **Setup resolved**: `state.setup.problem` is `null`, accounts read `alvgot/superagent-sandbox` → `dsh-superagent-alv`, the GitHub Source reports `ready` ("0 notifications; next poll ≥ 60s"), and `scripts/dsh-superagent status` exits 0.
+12. Installed the hourly check as a cron job (17 * * * *): exit 0/2/3 do nothing but are logged to `.artifacts/hourly-check.log`; only exit 1 runs `--respect-stop restart`.
 
 ## 5. Defects found while getting the gate green (all fixed)
 
@@ -86,27 +91,28 @@ linked plugin sources).
 | Check | Result |
 | --- | --- |
 | `NODE_ENV=test pnpm check` | exit 0 — typecheck, 1197 tests / 59 files, build |
-| `python3 scripts/dsh-superagent status` | exit 3 — service up, `runtime: paused`, `setup.repositoryUnset` (expected before settings) |
+| `python3 scripts/dsh-superagent status` | exit 0 — `setup: null`, no part errors, GitHub Source `ready` |
+| `GET state` | `accounts.repository alvgot/superagent-sandbox`, `accounts.agent dsh-superagent-alv` |
+| `GET sources` | `state: ready`, "0 notifications; next poll ≥ 60s" |
+| `gh-agent api /notifications` | 200 with a classic token (403 before: an App user token cannot read notifications) |
 | `dsh --profile dsh-tui --dump-config` | contains `- id: superagent-tui` with `url` and `pollMs` |
 | plugin manifest (template checker) | PASS |
 | terminal probe | panel opens, footer field renders, API data shown |
-| `git ls-remote origin` | fork reachable over SSH |
+| hourly cron | installed, dry-run under cron's minimal env exits 0 |
+| `git push origin main` | 4 commits pushed to `alvgot/dsh-superagent-prototype` over the deploy key |
 
 ## 8. Pending
 
-1. **Operator steps** (their own terminal/browser; message already sent):
-   ① create `dsh-superagent-alv`; ② `~/.local/bin/gh-agent auth login` as that account;
-   ③ create `alvgot/superagent-sandbox` (README, branch `main`); ④ add
-   `dsh-superagent-alv` as a collaborator with write access.
-   Check: `gh-agent api user --jq .login` → `dsh-superagent-alv`; the repo must answer 200.
-2. **Settings** through the Management API, in this order: `github` Source
-   (`alvgot/superagent-sandbox`, CLI `gh-agent`), `policy` (allow `alvgot`), `executor`
-   (prepare command cloning `/root/src/superagent-sandbox`), then prompts (commit
-   identity `dsh-superagent-alv`; remove the auto-merge paragraph).
-3. **Restart `dsh-tui`** once so the fixed plugin loads, then confirm the
-   `Superagent` panel and the `sa …` footer field.
-4. **Hourly check** from the operator's profile; handover message (panel location,
-   how to open a ticket, the three responsibility rules, docs 000→008).
+1. **Try it**: from `alvgot`, comment `@dsh-superagent-alv <request>` on an issue in
+   `alvgot/superagent-sandbox`. A Ticket should appear on the overview within about a
+   minute (the Source polls every 60 s).
+2. **Restart `dsh-tui` once** so the fixed plugin loads, then check the `Superagent`
+   panel (`alt+a`) and the `sa …` footer field.
+3. **Token hygiene**: the classic token was pasted into the chat transcript, so treat
+   it as exposed. It only reaches `alvgot/superagent-sandbox` (dedicated account), but
+   rotating it is cheap: create a new classic token with `repo`, `notifications`,
+   `read:org` and run `printf '%s' '<token>' | ~/.local/bin/gh-agent auth login
+   --hostname github.com --with-token`.
 
 ## 9. Notes
 
@@ -114,5 +120,11 @@ linked plugin sources).
   `NODE_ENV=production` is what breaks jsdom, not the repository.
 - `dsh` and `pnpm` in this container are recent Node 24 builds; the service script's
   process detection was adjusted for the `MainThread` thread name.
-- Generated artifacts live in `.artifacts/` (git-ignored): service logs and the
-  start/stop markers.
+- Authentication: `gh`'s device flow through the CLI's app issued a GitHub-App user
+  token (`ghu_`), which cannot read `/notifications`; the GitHub Source therefore
+  failed until a classic token (`ghp_`, scopes `repo` + `notifications`) replaced it.
+  `gh auth login --with-token` refuses a token without `read:org`, so the token was
+  written into `~/.config/gh-agent/hosts.yml` directly; `gh auth status` shows that
+  scope as a warning, and nothing here needs it.
+- Generated artifacts live in `.artifacts/` (git-ignored): service logs, control
+  markers and `hourly-check.log`.
