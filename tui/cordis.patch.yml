@@ -1,0 +1,12 @@
+# Bundle patch for the dsh-superagent terminal panel.
+#
+# Insert one plugin row into the profile that runs dsh-tui. The `url` points at
+# the management API served by the dsh-superagent service (the `superagent`
+# DSH profile, web template, `--no-open`): no browser is involved, the panel
+# only talks loopback HTTP. `pollMs` is the panel's refresh interval.
+- insert:
+    - id: superagent-tui
+      name: dsh-superagent-tui
+      config:
+        url: http://127.0.0.1:3082
+        pollMs: 5000

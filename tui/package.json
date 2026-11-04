@@ -1,0 +1,27 @@
+{
+  "name": "dsh-superagent-tui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Terminal (dsh-tui) side panel for dsh-superagent: status, tickets and controls, without a browser.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "dsh-plugin.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
